@@ -1,7 +1,13 @@
-from fastapi import FastAPI
-import mysql.connector
+from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+import mysql.connector
 
+monitoring_state = {
+    "running": False,
+    "session_id": None
+}
+
+from arduino_reader import collect_data
 app = FastAPI()
 
 app.add_middleware(
@@ -19,7 +25,7 @@ app.add_middleware(
 DB_CONFIG = {
     "host": "localhost",
     "user": "root",
-    "password": "Jeff@123",
+    "password": "",
     "database": "health_monitor"
 }
 
@@ -160,4 +166,41 @@ def analyze():
         },
 
         "insight": insight
+    }
+
+def run_monitoring():
+
+    monitoring_state["running"] = True
+    monitoring_state["session_id"] = None
+
+    try:
+        session_id = collect_data()
+
+        monitoring_state["session_id"] = session_id
+
+    finally:
+        monitoring_state["running"] = False
+
+
+
+@app.post("/start-monitoring")
+def start_monitoring(background_tasks: BackgroundTasks):
+
+    if monitoring_state["running"]:
+        return {
+            "message": "Monitoring is already running"
+        }
+
+    background_tasks.add_task(run_monitoring)
+
+    return {
+        "message": "Monitoring started"
+    }
+
+@app.get("/monitoring-status")
+def monitoring_status():
+
+    return {
+        "running": monitoring_state["running"],
+        "session_id": monitoring_state["session_id"]
     }

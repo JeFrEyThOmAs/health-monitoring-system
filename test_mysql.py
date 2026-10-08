@@ -35,7 +35,7 @@ time.sleep(2)
 db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="Jeff@123",
+    password="",
     database="health_monitor"
 )
 
